@@ -2,11 +2,13 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>table模块快速使用</title>
+    <title>table操作示例</title>
     <link rel="icon" href="data:image/ico;base64,aWNv">
     <link rel="stylesheet" href="//unpkg.com/layui@2.6.8/dist/css/layui.css"  media="all">
 </head>
 <body>
+
+<!-- 这里是表格上查询工具栏的html-->
 <div class="demoTable">
     <div class="layui-form-item" style="float: left">
         <label class="layui-form-label"> 姓名：</label>
@@ -23,21 +25,60 @@
             <b id="selectTxt"></b>
         </button>
         <button class="layui-btn" data-type="reload">搜索</button>
+        <button class="layui-btn" id="addBtn">新增</button>
     </div>
 
-
-
-
 </div>
-<table id="demo" lay-filter="test"></table>
 
+<!-- 这里是表单，新增用户的html-->
+<div class="layui-btn-container layui-hide" id="addDiv">
+    <form class="layui-form" action="" lay-filter="example">
+    <div class="layui-form-item">
+        <label class="layui-form-label">名称</label>
+        <div class="layui-input-block">
+            <input type="text" name="name" lay-verify="title" autocomplete="off" placeholder="请输入名称" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">性别</label>
+        <div class="layui-input-block">
+            <input type="checkbox" name="sex" lay-skin="switch" lay-text="男|女">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <div class="layui-inline">
+            <label class="layui-form-label">生日</label>
+            <div class="layui-input-block">
+                <input type="text" name="birthday" id="birthday" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+    </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="submit" class="layui-btn" id="saveBtn" lay-submit="" lay-filter="saveBtn">立即提交</button>
+
+            </div>
+        </div>
+    </form>
+</div>
+
+
+<table   id="demo" lay-filter="test"></table>
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-primary layui-btn-mini" lay-event="detail">查看</a>
+    <a class="layui-btn layui-btn-mini" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-mini" lay-event="del">删除</a>
+</script>
 <script src="//unpkg.com/layui@2.6.8/dist/layui.js" charset="utf-8"></script>
 <script>
-    layui.use(['table','dropdown'], function(){
+    layui.use(['table','dropdown','form'], function(){
 
         var table = layui.table;
-        var dropdown = layui.dropdown
-        //初演示
+        var form = layui.form;
+        var dropdown = layui.dropdown;
+        var laydate = layui.laydate;
+        var str=""
+        //下拉框动态加载演示
         dropdown.render({
             elem: '.demo1'
             ,data: [{
@@ -56,7 +97,33 @@
                 $("#selectTxt").text(obj.title);
             }
         });
-        var str=""
+
+
+        //监听指定开关
+        form.on('switch(switchTest)', function(data){
+            layer.msg('开关checked：'+ (this.checked ? 'true' : 'false'), {
+                offset: '6px'
+            });
+            console.log(data)
+        });
+
+
+        //监听提交
+        form.on('submit(saveBtn)', function(data){
+            console.log(data.field.name)
+            console.log(data.field.sex)
+            console.log(data.field.birthday)
+            var input={
+                name:data.field.name,
+                birthday:data.field.birthday,
+                sex:2
+            }
+            if (data.field.sex=="on"){
+                input.sex=1
+            }
+            //调用服务端
+            AddUser(input,-1)
+        });
 
         //第一个实例
         table.render({
@@ -74,15 +141,16 @@
                 return {
                     "code": res.code, //解析接口状态
                     "msg": res.message, //解析提示文本
-                    "count": res.data.total_count, //解析数据长度
+                    "count": res.total_count, //解析总条数，注意我这里的格式
                     "data": res.data //解析数据列表
                 }
             }
             ,cols: [[ //表头
-                {field: 'name', title: '姓名', width:120}
-                ,{field: 'no', title: '编号', width:140}
-
+                {checkbox: true, fixed: true},
+                {field: 'no', title: '编号', width:140}
+                ,{field: 'name', title: '姓名', width:120}
                 ,{field: 'sex', title: '性别', width: 140 ,sort: true,templet: function(res){
+                    //数据转换显示示例
                         if (res.sex==1){
                             return '男'
                         }else if (res.sex==2){
@@ -92,6 +160,7 @@
                         }
 
                     }} ,{field: 'birthday', title: '生日', width:280}
+                ,{field:'right', title: '操作', width:300,toolbar:"#barDemo"}
             ]],
             id:'testReload'
 
@@ -113,10 +182,155 @@
                 });
             }
         };
+        //搜索按钮点击后触发，也可以写简易版的，像普通事件那样
         $('.demoTable .layui-btn').on('click', function(){
             var type = $(this).data('type');
+            //调用 reload
             active[type] ? active[type].call(this) : '';
+
         });
+        //监听表格复选框选择，暂时不做批量删除，想做这里实现
+        table.on('checkbox(test)', function(obj){
+            console.log(obj)
+        });
+        //监听工具条 最原始的，如果觉得编辑复杂的话看这个
+        // table.on('tool(test)', function(obj){
+        //     var data = obj.data;
+        //     if(obj.event === 'detail'){
+        //         layer.msg('ID：'+ data.no + ' 的查看操作');
+        //     } else if(obj.event === 'del'){
+        //         layer.confirm('真的删除行么', function(index){
+        //             obj.del();
+        //             layer.close(index);
+        //         });
+        //     } else if(obj.event === 'edit'){
+        //         layer.alert('编辑行：<br>'+ JSON.stringify(data))
+        //     }
+        // });
+
+        //新增按钮点击触发弹窗
+        $('#addBtn').on('click', function(){
+
+            html= $("#addDiv").html()
+            //弹出一个页面层
+            layer.open({
+                type: 1,
+                area: ['600px', '360px'],
+                shadeClose: true, //点击遮罩关闭
+                content: html
+            });
+            //日期选择组件加载
+            laydate.render({
+                elem: '#birthday'
+            });
+            //自定义验证规则
+            form.verify({
+                name: function(value){
+                    if(value.length < 2){
+                        return '姓名至少得2个字符啊';
+                    }
+                }
+            });
+            form.render();
+        });
+
+        //监听工具条,绑定点击事件
+        table.on('tool(test)', function(obj){
+            var data = obj.data;
+            if(obj.event === 'detail'){
+                layer.msg('ID：'+ data.no + ' 的查看操作');
+            } else if(obj.event === 'del'){
+                layer.confirm('真的删除行么', function(index){
+                    console.log(data);
+                    $.ajax({
+                        url: "http://localhost:8000/user/remove",
+                        type: "POST",
+                        data:{"no":data.no},
+                        dataType: "json",
+                        success: function(data){
+
+                            if(data.data==true){
+                                //删除这一行
+                                obj.del();
+                                //关闭弹框
+                                layer.close(index);
+                                layer.msg("删除成功", {icon: 6});
+                            }else{
+                                layer.msg("删除失败", {icon: 5});
+                            }
+                        }
+
+                    });
+                });
+            } else if(obj.event === 'edit'){
+
+                layer.prompt({
+                    formType: 2
+                    ,title: '修改 ID 为 ['+ data.no +'] 的生日为'
+                    ,value: data.birthday
+                }, function(value, index){
+                    //这里一般是发送修改的Ajax请求
+                    EidtUser(data,value,index,obj);
+
+
+
+                });
+
+
+
+            }
+        });
+        //编辑的方法
+        function  EidtUser(data,value,index,obj) {
+            $.ajax({
+                url: "http://localhost:8000/user/update",
+                type: "POST",
+                data: {"no": data.no, "birthday": value},
+                dataType: "json",
+                success: function (data) {
+                    //这里的state 是你返回的字段名，自己替换
+                    if (data.data == true) {
+                        //关闭弹框
+                        layer.close(index);
+                        //同步更新表格和缓存对应的值
+                        obj.update({
+                            birthday: value
+                        });
+                        layer.msg("修改成功", {icon: 6});
+                    } else {
+                        layer.msg("修改失败", {icon: 5});
+                    }
+                }
+
+            });
+        }
+
+        //新增的方法
+        function  AddUser(data,index) {
+            $.ajax({
+                url: "http://localhost:8000/user/add",
+                type: "POST",
+                data: {"no": data.no,"name":data.name, "birthday": data.birthday,"sex":data.sex},
+                dataType: "json",
+                success: function (data) {
+                    //这里的state 是你返回的字段名，自己替换
+                    if (data.data == true) {
+                        //关闭弹框
+                        layer.close(index);
+                        //同步更新表格和缓存对应的值
+
+                        layer.msg("成功", {icon: 6});
+                    } else {
+                        layer.msg("失败", {icon: 5});
+                    }
+                },
+                error:function (data) {
+                   console.log(data)
+                    layer.msg("失败", {icon: 5});
+                }
+
+            });
+        }
     });
 
 </script>
