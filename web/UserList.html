@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>table模块快速使用</title>
+    <link rel="icon" href="data:image/ico;base64,aWNv">
+    <link rel="stylesheet" href="//unpkg.com/layui@2.6.8/dist/css/layui.css"  media="all">
+</head>
+<body>
+<div class="demoTable">
+    <div class="layui-form-item" style="float: left">
+        <label class="layui-form-label"> 姓名：</label>
+        <div class="layui-inline">
+            <input class="layui-input" name="create_time" id="demoReload" autocomplete="off">
+        </div>
+
+    </div>
+    <div class="layui-btn-container">
+
+        <button class="layui-btn demo1">
+            性别：
+            <i class="layui-icon layui-icon-down layui-font-12"></i>
+            <b id="selectTxt"></b>
+        </button>
+        <button class="layui-btn" data-type="reload">搜索</button>
+    </div>
+
+
+
+
+</div>
+<table id="demo" lay-filter="test"></table>
+
+<script src="//unpkg.com/layui@2.6.8/dist/layui.js" charset="utf-8"></script>
+<script>
+    layui.use(['table','dropdown'], function(){
+
+        var table = layui.table;
+        var dropdown = layui.dropdown
+        //初演示
+        dropdown.render({
+            elem: '.demo1'
+            ,data: [{
+                title: '全部'
+                ,id: -1
+            },
+                {
+                    title: '男'
+                    ,id: 1
+                },{
+                    title: '女'
+                    ,id: 2
+                }
+            ],click: function(obj){
+                this.elem.val(obj.id);
+                $("#selectTxt").text(obj.title);
+            }
+        });
+        var str=""
+
+        //第一个实例
+        table.render({
+            elem: '#demo'
+            ,height: 600
+            ,url: 'http://localhost:8000/user/list' //数据接口
+            ,page: true //开启分页
+            ,method:'post'
+            ,contentType:'application/json'
+            ,where:{
+                name:str,
+                status:1,
+            }
+            ,parseData: function(res) { //res 即为原始返回的数据
+                return {
+                    "code": res.code, //解析接口状态
+                    "msg": res.message, //解析提示文本
+                    "count": res.data.total_count, //解析数据长度
+                    "data": res.data //解析数据列表
+                }
+            }
+            ,cols: [[ //表头
+                {field: 'name', title: '姓名', width:120}
+                ,{field: 'no', title: '编号', width:140}
+
+                ,{field: 'sex', title: '性别', width: 140 ,sort: true,templet: function(res){
+                        if (res.sex==1){
+                            return '男'
+                        }else if (res.sex==2){
+                            return '女'
+                        }else{
+                            return '未知'
+                        }
+
+                    }} ,{field: 'birthday', title: '生日', width:280}
+            ]],
+            id:'testReload'
+
+        });
+        var $ = layui.$, active = {
+            reload: function(){
+                str=$("#demoReload").val()
+
+
+                var sex= parseInt($(".demo1").val())
+
+                table.reload('testReload', {
+                    where: {
+
+                        name:str,
+                        sex:sex
+
+                    }
+                });
+            }
+        };
+        $('.demoTable .layui-btn').on('click', function(){
+            var type = $(this).data('type');
+            active[type] ? active[type].call(this) : '';
+        });
+    });
+
+</script>
+</body>
+</html>
