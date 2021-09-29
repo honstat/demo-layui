@@ -13,7 +13,7 @@ layui如何使用
 web/UserList.html 是教你如何绑定数据列表的，如何解析，支持自定义参数绑定，自定义字段逻辑判断
 
 
-web/UserInsertEditDelete.html 是演示增删改 如何绑定事件，如何取之，如何和后端交互
+web/UserInsertEditDelete.html 是演示增删改 如何绑定事件，如何取值，如何和后端交互
 
 
 至于后端，这次采用了golang的语法给大家提供接口，做个参考
